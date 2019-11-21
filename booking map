@@ -1,0 +1,421 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+using GMap.NET.MapProviders;
+using GMap.NET.WindowsForms;
+using GMap.NET.WindowsForms.Markers;
+using GMap.NET;
+using System.Text.RegularExpressions;
+using System.Net.Mail;
+using System.Net.Mime;
+using System.Net;
+using System.Web;
+
+namespace GOGO_cab_system
+{
+    public partial class Booking : Form
+    {
+        SqlConnection sqlcon;
+        List<PointLatLng> _points;
+        public Booking()
+        {
+
+             
+            InitializeComponent();
+            try
+            {
+                DBconnection obj = new DBconnection();
+                sqlcon = obj.getConnection();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error Connecting" + ex, "Customer Form", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            _points = new List<PointLatLng>();
+
+            String sqlquery = "select * from Driver_reg";
+            SqlCommand sqlcomm = new SqlCommand(sqlquery, sqlcon);
+            SqlDataAdapter sda = new SqlDataAdapter(sqlcomm);
+            DataTable dt = new DataTable();
+            
+            cmbAVseaters.ValueMember = "Driverid";
+            cmbAVseaters.DisplayMember = "vehicletype";
+            cmbAVseaters.DataSource = dt;
+            cmbvehicle.Enabled = false;
+        }
+
+        private void panel1_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+        private void tripidload()
+        {
+            SqlCommand cmd = new SqlCommand("Select TripID from Booking_Table", sqlcon);
+            SqlDataReader dr = cmd.ExecuteReader();
+            string id = "";
+            Boolean check = dr.HasRows;
+            if (check)
+            {
+                while (dr.Read())
+
+
+
+                {
+                    id = dr[0].ToString().Trim();
+
+                }
+                string idstring = id.Substring(3);
+                int CTR = Int32.Parse(idstring);
+                if (CTR >= 1 && CTR < 9)
+                {
+                    CTR++;
+                    txttripid.Text = "TR00" + CTR;
+                }
+                else if (CTR >= 9 && CTR < 99)
+                {
+                    CTR++;
+                    txttripid.Text = "TR0" + CTR;
+                }
+                else if (CTR > 99)
+                {
+                    CTR++;
+                    txttripid.Text = "TR" + CTR;
+                }
+
+
+            }
+
+            else
+            {
+                txttripid.Text = "TR001";
+            }
+
+            dr.Close();
+        }
+
+        private void btncancel_Click(object sender, EventArgs e)
+        {
+            Receptionistform obj = new Receptionistform();
+            obj.Show();
+            this.Hide();
+        }
+
+        private void txtDistance_TextChanged(object sender, EventArgs e)
+        {
+            
+        }
+
+        private void btnLoadMap_Click(object sender, EventArgs e)
+        {
+
+            GMapProviders.GoogleMap.ApiKey = @"AIzaSyDyrcAjTlYZ67rJsd1C15xkbmmn-6fe32I";
+            map.DragButton = MouseButtons.Left;
+            map.MapProvider = GMapProviders.GoogleMap;
+            double lat1 = Convert.ToDouble(txtLatitude1.Text);
+            double lon1 = Convert.ToDouble(txtLongitude1.Text);
+            map.Position = new PointLatLng(lat1, lon1);
+            map.MaxZoom = 16;
+            map.Zoom = 12;
+            map.MinZoom = 5;
+            PointLatLng point = new PointLatLng(lat1, lon1);
+            GMapMarker marker = new GMarkerGoogle(point, GMarkerGoogleType.blue_dot);
+            GMapOverlay markers = new GMapOverlay("markers"); //Create Overlay
+            markers.Markers.Add(marker); //Add all available markers to the Overlay
+            map.Overlays.Add(markers); //Cover map with Overlay
+        }
+
+        private void btnPinpoint_Click(object sender, EventArgs e)
+        {
+            _points.Add(new PointLatLng(Convert.ToDouble(txtLatitude1.Text), Convert.ToDouble(txtLongitude1.Text)));
+        }
+
+        private void btnClear_Click(object sender, EventArgs e)
+        {
+            txtLongitude1.Clear();
+            txtLatitude1.Clear();
+           
+        }
+        private void getdistance()
+        {
+            var route = GoogleMapProvider.Instance.GetRoute(_points[0], _points[1], false, false, 14);
+            var r = new GMapRoute(route.Points, "My Route")
+            {
+                Stroke = new Pen(Color.Red, 5)
+            };
+            var routes = new GMapOverlay("routes");
+            routes.Routes.Add(r);
+            map.Overlays.Add(routes);
+
+            txtDistance.Text = route.Distance + " Km";
+
+        }
+
+        private void Booking_Load(object sender, EventArgs e)
+        {
+            map.DragButton = MouseButtons.Left;
+            map.MapProvider = GMapProviders.GoogleMap;
+            map.ShowCenter = false;
+            cusIDload();
+            tripidload();
+            
+
+        }
+
+        private void btnRoute_Click(object sender, EventArgs e)
+        {
+            getdistance();
+        }
+        private void cusIDload()
+        {
+            SqlCommand cmd = new SqlCommand("Select CustomerID from Booking_Table", sqlcon);
+            SqlDataReader dr = cmd.ExecuteReader();
+            string id = "";
+            Boolean check = dr.HasRows;
+            if (check)
+            {
+                while (dr.Read())
+
+
+
+                {
+                    id = dr[0].ToString().Trim();
+
+                }
+                string idstring = id.Substring(3);
+                int CTR = Int32.Parse(idstring);
+                if (CTR >= 1 && CTR < 9)
+                {
+                    CTR++;
+                    txtCustomerID.Text = "CS00" + CTR;
+                }
+                else if (CTR >= 9 && CTR < 99)
+                {
+                    CTR++;
+                    txtCustomerID.Text = "CS0" + CTR;
+                }
+                else if (CTR > 99)
+                {
+                    CTR++;
+                    txtCustomerID.Text = "CS" + CTR;
+                }
+
+
+            }
+
+            else
+            {
+                txtCustomerID.Text = "CS001";
+            }
+
+            dr.Close();
+        }
+
+       
+
+        private void txtCustomerEmail_Leave(object sender, EventArgs e)
+        {
+           
+        }
+
+        private void btnsubmit_Click(object sender, EventArgs e)
+        {
+            if (txtCustomerName.Text == "")
+            {
+                MessageBox.Show("  Please enter the customer name", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
+            else if (txtemailid.Text == "")
+            {
+                MessageBox.Show(" Please enter the customer emailid", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
+            else if (txtCustomerMobile.Text == "")
+            {
+                MessageBox.Show("Enter phonenumber Please.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            else if (txtCustomerMobile.Text.Length < 10 || txtCustomerMobile.Text.Length > 10)
+            {
+                MessageBox.Show("Enter a valid phone number.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            else if (txtPassengers.Text == "")
+            {
+                MessageBox.Show("Enter the count please.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
+          
+            else if (cmbAVseaters.Text == "")
+            {
+                MessageBox.Show("Please select the seaters.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            else if (cmbvehicle.Text == "")
+            {
+                MessageBox.Show("Please select the vehicle.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
+
+            else if (txtDistance.Text == "")
+            {
+                MessageBox.Show(" Please calculte the distance.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
+            else
+            {
+
+                try
+                {
+
+
+
+                    SqlCommand cmd = new SqlCommand("Insert into Booking_Table values ( '" + txttripid.Text + "','" + txtCustomerID.Text + "','" + txtCustomerName.Text + "','" + txtemailid.Text + "', '" + txtCustomerMobile.Text + "','" + txtPassengers.Text + "','" + dateBooking.Text + "','" + cmbAVseaters.Text + "','" + cmbvehicle.Text + "','" + txtDistance.Text + "');");
+
+                    cmd.Connection = sqlcon;
+                    int temp = cmd.ExecuteNonQuery();
+
+                    if (temp > 0)
+                    {
+                        MessageBox.Show("Booking succussfull", "Booking ", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        Receptionistform obj = new Receptionistform();
+                        obj.Show();
+                        this.Hide();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Booking succussfull", "Booking", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        txttripid.Clear();
+                        txtCustomerID.Clear();
+                        txtCustomerName.Clear();
+                        txtemailid.Clear();
+                        txtCustomerMobile.Clear();
+                        txtPassengers.Clear();
+                        txtDistance.Clear();
+                        txtLatitude1.Clear();
+                        txtLongitude1.Clear();
+
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error Inserting Data" + ex, "Booking", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+
+                try
+                {
+                    SmtpClient Clinet = new SmtpClient("smtp.gmail.com", 587);
+                    
+                    Clinet.Timeout = 100000;
+                    Clinet.DeliveryMethod = SmtpDeliveryMethod.Network;
+                    Clinet.UseDefaultCredentials = false;
+                    Clinet.Credentials = new NetworkCredential("coderedtechnolgy", "codered1230");
+                    MailMessage msg = new MailMessage();
+                    msg.Bcc.Add(txtemailid.Text);
+                    msg.From = new MailAddress("coderedtechnolgy@gmail.com");
+                    msg.Subject = "Booking Confrimed";
+                    msg.Body = "Booking Confrimed with cab " +txtCustomerID.Text + "  ON " + dateBooking.Value.ToString("MM/dd/yyyy") + "  Vehicle Number" + cmbvehicle.Text + "   Thank You ";
+                    Clinet.Send(msg);
+                    MessageBox.Show("Mail Sent");
+
+
+                }
+
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+
+            }
+
+
+
+
+        }
+
+        private void cmbAvailability_SelectedIndexChanged(object sender, EventArgs e)
+        {
+           
+            
+        }
+
+        private void txtVehicle_TextChanged(object sender, EventArgs e)
+        {
+            
+        }
+
+      
+
+        private void cmbAVseaters_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            String sqlquery = "select * from Driver_reg where Driverid=@Driverid";
+            SqlCommand sqlcomm = new SqlCommand(sqlquery, sqlcon);
+            sqlcomm.Parameters.AddWithValue("@Driverid", cmbAVseaters.SelectedValue.ToString());
+            SqlDataAdapter sda = new SqlDataAdapter(sqlcomm);
+            DataTable dt = new DataTable();
+            sda.Fill(dt);
+            cmbvehicle.ValueMember = "Driverid";
+            cmbvehicle.DisplayMember = "vehiclenumber";
+            cmbvehicle.DataSource = dt;
+            cmbvehicle.Enabled = true;
+
+        }
+
+        private void Search_Click(object sender, EventArgs e)
+        {
+            
+        }
+
+        private void txtPassengers_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnLogout_Click(object sender, EventArgs e)
+        {
+            Receptionistform obj = new Receptionistform();
+            obj.Show();
+            this.Hide();
+        }
+
+        private void label2_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void btnpointreset_Click(object sender, EventArgs e)
+        {
+            _points.Clear();
+            txtLatitude1.Clear();
+            txtLongitude1.Clear();
+        }
+
+        private void cmbvehicle_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            
+        }
+
+        private void txtemailid_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void txtemailid_Leave(object sender, EventArgs e)
+        {
+            String pattern = "^([0-9a-zA-Z]([-\\.\\w]*[0-9a-zA-Z])*@([0-9a-zA-Z][-\\w]*[0-9a-zA]\\.)+[a-zA-Z]{2,9})$";
+            if (Regex.IsMatch(txtemailid.Text, pattern))
+            {
+                errorProvider1.Clear();
+            }
+            else
+            {
+                errorProvider1.SetError(this.txtemailid, "Please provide a valid email");
+            }
+        }
+    }
+}
